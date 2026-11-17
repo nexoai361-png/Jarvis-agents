@@ -1,0 +1,6 @@
+{
+  "name": "ReversX",
+  "description": "ReversX dark minimalist assistant interface.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
