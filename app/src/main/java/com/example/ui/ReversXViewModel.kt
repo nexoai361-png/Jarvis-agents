@@ -29,7 +29,9 @@ data class ReversXUiState(
   val voiceAmplitude: Float = 0f,
   val voiceVisualStyle: VoiceVisualStyle = VoiceVisualStyle.EQUALIZER,
   val isPlusSheetVisible: Boolean = false,
-  val isAttachmentSheetVisible: Boolean = false,
+  val isAttachmentMenuExpanded: Boolean = false,
+  val attachedItemLabel: String? = null,
+  val isAttachmentPhoto: Boolean = false,
   val sidebarSearchQuery: String = "",
   val chatHistory: List<ChatHistoryItem> = emptyList(),
   val activeChatId: String? = null,
@@ -146,8 +148,22 @@ class ReversXViewModel : ViewModel() {
     _uiState.update { it.copy(isPlusSheetVisible = visible) }
   }
 
-  fun onSetAttachmentSheetVisible(visible: Boolean) {
-    _uiState.update { it.copy(isAttachmentSheetVisible = visible) }
+  fun onSetAttachmentMenuExpanded(expanded: Boolean) {
+    _uiState.update { it.copy(isAttachmentMenuExpanded = expanded) }
+  }
+
+  fun onAttachItem(label: String, isPhoto: Boolean) {
+    _uiState.update {
+      it.copy(
+        attachedItemLabel = label,
+        isAttachmentPhoto = isPhoto,
+        isAttachmentMenuExpanded = false,
+      )
+    }
+  }
+
+  fun onClearAttachment() {
+    _uiState.update { it.copy(attachedItemLabel = null, isAttachmentPhoto = false) }
   }
 
   fun onSidebarSearchChanged(query: String) {
@@ -190,7 +206,7 @@ class ReversXViewModel : ViewModel() {
         return@update state
       }
       if (state.isTemporaryChat) {
-        return@update state.copy(inputText = "")
+        return@update state.copy(inputText = "", attachedItemLabel = null)
       }
       val newChatId = UUID.randomUUID().toString()
       val newItem =
@@ -201,6 +217,7 @@ class ReversXViewModel : ViewModel() {
         )
       state.copy(
         inputText = "",
+        attachedItemLabel = null,
         chatHistory = listOf(newItem) + state.chatHistory,
         activeChatId = newChatId,
       )

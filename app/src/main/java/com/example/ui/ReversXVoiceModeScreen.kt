@@ -45,13 +45,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Mic
-import androidx.compose.material.icons.outlined.MicOff
-import androidx.compose.material.icons.rounded.ArrowUpward
-import androidx.compose.material.icons.rounded.Close
-import androidx.compose.material.icons.rounded.GraphicEq
-import androidx.compose.material.icons.rounded.Pause
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -78,6 +71,14 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import com.adamglin.PhosphorIcons
+import com.adamglin.phosphoricons.Regular
+import com.adamglin.phosphoricons.regular.ArrowUp
+import com.adamglin.phosphoricons.regular.Microphone
+import com.adamglin.phosphoricons.regular.MicrophoneSlash
+import com.adamglin.phosphoricons.regular.Pause
+import com.adamglin.phosphoricons.regular.Waveform
+import com.adamglin.phosphoricons.regular.X
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -434,7 +435,7 @@ internal fun ReversXVoiceModeScreen(
               color = PlusAccent,
             )
             Icon(
-              imageVector = Icons.Rounded.ArrowUpward,
+              imageVector = PhosphorIcons.Regular.ArrowUp,
               contentDescription = null,
               tint = PlusAccent,
               modifier = Modifier.size(16.dp),
@@ -1196,10 +1197,12 @@ private fun VoiceControlBar(
     ) {
       Box(contentAlignment = Alignment.Center) {
         Icon(
-          imageVector = if (isMuted) Icons.Outlined.MicOff else Icons.Outlined.Mic,
+          imageVector =
+            if (isMuted) PhosphorIcons.Regular.MicrophoneSlash
+            else PhosphorIcons.Regular.Microphone,
           contentDescription = null,
           tint = if (isMuted) JarvisMutedRed else MaterialTheme.colorScheme.onBackground,
-          modifier = Modifier.size(24.dp),
+          modifier = Modifier.size(22.dp),
         )
       }
     }
@@ -1223,10 +1226,12 @@ private fun VoiceControlBar(
           .testTag("voice_center_toggle_button"),
     ) {
       Icon(
-        imageVector = if (isActive) Icons.Rounded.Pause else Icons.Rounded.GraphicEq,
+        imageVector =
+          if (isActive) PhosphorIcons.Regular.Pause
+          else PhosphorIcons.Regular.Waveform,
         contentDescription = null,
         tint = Color.White,
-        modifier = Modifier.size(28.dp),
+        modifier = Modifier.size(26.dp),
       )
     }
 
@@ -1244,10 +1249,10 @@ private fun VoiceControlBar(
     ) {
       Box(contentAlignment = Alignment.Center) {
         Icon(
-          imageVector = Icons.Rounded.Close,
+          imageVector = PhosphorIcons.Regular.X,
           contentDescription = null,
           tint = MaterialTheme.colorScheme.onBackground,
-          modifier = Modifier.size(24.dp),
+          modifier = Modifier.size(22.dp),
         )
       }
     }

@@ -1,7 +1,15 @@
 package com.example.ui
 
+import android.content.Context
+import android.net.Uri
+import android.provider.OpenableColumns
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
@@ -30,17 +38,10 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Edit
-import androidx.compose.material.icons.outlined.Image
-import androidx.compose.material.icons.outlined.Language
-import androidx.compose.material.icons.outlined.Mic
-import androidx.compose.material.icons.outlined.PhotoLibrary
-import androidx.compose.material.icons.rounded.Add
-import androidx.compose.material.icons.rounded.ArrowUpward
 import androidx.compose.material3.DrawerValue
+import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -57,6 +58,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -67,8 +69,22 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.DpOffset
+import com.adamglin.PhosphorIcons
+import com.adamglin.phosphoricons.Regular
+import com.adamglin.phosphoricons.regular.ArrowUp
+import com.adamglin.phosphoricons.regular.FileText
+import com.adamglin.phosphoricons.regular.Globe
+import com.adamglin.phosphoricons.regular.Image
+import com.adamglin.phosphoricons.regular.Images
+import com.adamglin.phosphoricons.regular.Microphone
+import com.adamglin.phosphoricons.regular.Pencil
+import com.adamglin.phosphoricons.regular.Plus
+import com.adamglin.phosphoricons.regular.X
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
@@ -102,7 +118,30 @@ fun ReversXScreen(
     scope.launch { drawerState.close() }
   }
 
+  val context = LocalContext.current
+  val defaultPhotoLabel = stringResource(R.string.attachment_photo_label)
+  val defaultFileLabel = stringResource(R.string.attachment_file_label)
+
+  val photoPickerLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+      if (uri != null) {
+        val label = resolveDisplayName(context, uri) ?: defaultPhotoLabel
+        viewModel.onAttachItem(label = label, isPhoto = true)
+      }
+    }
+
+  val filePickerLauncher =
+    rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+      if (uri != null) {
+        val label = resolveDisplayName(context, uri) ?: defaultFileLabel
+        viewModel.onAttachItem(label = label, isPhoto = false)
+      }
+    }
+
   val justNowLabel = stringResource(R.string.sidebar_chat_just_now)
+  val imagePromptPrefix = stringResource(R.string.prompt_prefix_image)
+  val writePromptPrefix = stringResource(R.string.prompt_prefix_write)
+  val searchPromptPrefix = stringResource(R.string.prompt_prefix_search)
 
   ModalNavigationDrawer(
     drawerState = drawerState,
@@ -114,8 +153,11 @@ fun ReversXScreen(
           viewModel.onNewChat()
           scope.launch { drawerState.close() }
         },
-        onToggleTemporaryChat = {
-          viewModel.onToggleTemporaryChat()
+        onSectionActionClick = { section ->
+          if (section == "images") {
+            viewModel.onQuickActionSelected(imagePromptPrefix)
+            inputFocusRequester.requestFocus()
+          }
           scope.launch { drawerState.close() }
         },
         onSelectChat = { chatId ->
@@ -169,10 +211,6 @@ fun ReversXScreen(
           }
         }
 
-  val imagePromptPrefix = stringResource(R.string.prompt_prefix_image)
-  val writePromptPrefix = stringResource(R.string.prompt_prefix_write)
-  val searchPromptPrefix = stringResource(R.string.prompt_prefix_search)
-
         QuickActionsSection(
           onCreateImageClick = {
             viewModel.onQuickActionSelected(imagePromptPrefix)
@@ -188,14 +226,57 @@ fun ReversXScreen(
           },
         )
 
-        Spacer(modifier = Modifier.height(14.dp))
+        Spacer(modifier = Modifier.height(10.dp))
+
+        AnimatedVisibility(
+          visible = uiState.attachedItemLabel != null,
+          enter = fadeIn(),
+          exit = fadeOut(),
+        ) {
+          uiState.attachedItemLabel?.let { label ->
+            AttachmentChip(
+              label = label,
+              isPhoto = uiState.isAttachmentPhoto,
+              onRemove = viewModel::onClearAttachment,
+            )
+          }
+        }
 
         ComposerBar(
           query = uiState.inputText,
           isVoiceActive = uiState.isVoiceModeActive,
+          isAddMenuExpanded = uiState.isAttachmentMenuExpanded,
           focusRequester = inputFocusRequester,
           onQueryChange = viewModel::onInputChanged,
-          onAddClick = { viewModel.onSetAttachmentSheetVisible(true) },
+          onToggleAddMenu = {
+            viewModel.onSetAttachmentMenuExpanded(!uiState.isAttachmentMenuExpanded)
+          },
+          onDismissAddMenu = { viewModel.onSetAttachmentMenuExpanded(false) },
+          onPickPhotos = {
+            viewModel.onSetAttachmentMenuExpanded(false)
+            photoPickerLauncher.launch(
+              PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+            )
+          },
+          onPickFiles = {
+            viewModel.onSetAttachmentMenuExpanded(false)
+            filePickerLauncher.launch(arrayOf("*/*"))
+          },
+          onSelectImageMode = {
+            viewModel.onSetAttachmentMenuExpanded(false)
+            viewModel.onQuickActionSelected(imagePromptPrefix)
+            inputFocusRequester.requestFocus()
+          },
+          onSelectWebMode = {
+            viewModel.onSetAttachmentMenuExpanded(false)
+            viewModel.onQuickActionSelected(searchPromptPrefix)
+            inputFocusRequester.requestFocus()
+          },
+          onSelectWriteMode = {
+            viewModel.onSetAttachmentMenuExpanded(false)
+            viewModel.onQuickActionSelected(writePromptPrefix)
+            inputFocusRequester.requestFocus()
+          },
           onMicClick = {
             VoiceSoundPlayer.playActivationChime()
             viewModel.onOpenVoiceMode()
@@ -265,40 +346,6 @@ fun ReversXScreen(
             Text(stringResource(R.string.plus_sheet_close), color = PlusAccent)
           }
         }
-      }
-    }
-  }
-
-  if (uiState.isAttachmentSheetVisible) {
-    BackHandler { viewModel.onSetAttachmentSheetVisible(false) }
-    ModalBottomSheet(
-      onDismissRequest = { viewModel.onSetAttachmentSheetVisible(false) },
-      containerColor = MaterialTheme.colorScheme.surface,
-      contentColor = MaterialTheme.colorScheme.onSurface,
-    ) {
-      Column(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
-      ) {
-        Text(
-          text = stringResource(R.string.attachment_sheet_title),
-          style = MaterialTheme.typography.titleMedium,
-          color = MaterialTheme.colorScheme.onBackground,
-          modifier = Modifier.padding(horizontal = 8.dp, vertical = 8.dp),
-        )
-        QuickActionRow(
-          icon = Icons.Outlined.PhotoLibrary,
-          label = stringResource(R.string.attachment_photos),
-          testTag = "attachment_photos_item",
-          onClick = { viewModel.onSetAttachmentSheetVisible(false) },
-        )
-        QuickActionRow(
-          icon = Icons.Outlined.Description,
-          label = stringResource(R.string.attachment_files),
-          testTag = "attachment_files_item",
-          onClick = { viewModel.onSetAttachmentSheetVisible(false) },
-        )
-        Spacer(modifier = Modifier.height(16.dp))
       }
     }
   }
@@ -408,19 +455,19 @@ private fun QuickActionsSection(
     verticalArrangement = Arrangement.spacedBy(4.dp),
   ) {
     QuickActionRow(
-      icon = Icons.Outlined.Image,
+      icon = PhosphorIcons.Regular.Image,
       label = stringResource(R.string.action_create_image),
       testTag = "action_create_image",
       onClick = onCreateImageClick,
     )
     QuickActionRow(
-      icon = Icons.Outlined.Edit,
+      icon = PhosphorIcons.Regular.Pencil,
       label = stringResource(R.string.action_write_or_edit),
       testTag = "action_write_or_edit",
       onClick = onWriteOrEditClick,
     )
     QuickActionRow(
-      icon = Icons.Outlined.Language,
+      icon = PhosphorIcons.Regular.Globe,
       label = stringResource(R.string.action_search_web),
       testTag = "action_search_web",
       onClick = onSearchWebClick,
@@ -449,7 +496,7 @@ private fun QuickActionRow(
       imageVector = icon,
       contentDescription = null,
       tint = MaterialTheme.colorScheme.onBackground,
-      modifier = Modifier.size(22.dp),
+      modifier = Modifier.size(20.dp),
     )
     Spacer(modifier = Modifier.width(14.dp))
     Text(
@@ -464,12 +511,75 @@ private fun QuickActionRow(
 }
 
 @Composable
+private fun AttachmentChip(
+  label: String,
+  isPhoto: Boolean,
+  onRemove: () -> Unit,
+) {
+  val removeDesc = stringResource(R.string.cd_remove_attachment)
+  Row(
+    modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 6.dp),
+  ) {
+    Surface(
+      shape = RoundedCornerShape(50),
+      color = Color(0xFF1A1A20),
+      border = BorderStroke(0.5.dp, Color(0xFF2D2D36)),
+    ) {
+      Row(
+        modifier = Modifier.padding(start = 10.dp, end = 6.dp, top = 5.dp, bottom = 5.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+      ) {
+        Icon(
+          imageVector =
+            if (isPhoto) PhosphorIcons.Regular.Images else PhosphorIcons.Regular.FileText,
+          contentDescription = null,
+          tint = PlusIconAccent,
+          modifier = Modifier.size(14.dp),
+        )
+        Text(
+          text = label,
+          style = MaterialTheme.typography.labelMedium,
+          color = MaterialTheme.colorScheme.onBackground,
+          maxLines = 1,
+          overflow = TextOverflow.Ellipsis,
+          modifier = Modifier.widthIn(max = 200.dp),
+        )
+        Box(
+          contentAlignment = Alignment.Center,
+          modifier =
+            Modifier.size(20.dp)
+              .clip(CircleShape)
+              .clickable(role = Role.Button, onClick = onRemove)
+              .semantics { contentDescription = removeDesc }
+              .testTag("remove_attachment_chip_button"),
+        ) {
+          Icon(
+            imageVector = PhosphorIcons.Regular.X,
+            contentDescription = null,
+            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.size(12.dp),
+          )
+        }
+      }
+    }
+  }
+}
+
+@Composable
 private fun ComposerBar(
   query: String,
   isVoiceActive: Boolean,
+  isAddMenuExpanded: Boolean,
   focusRequester: FocusRequester,
   onQueryChange: (String) -> Unit,
-  onAddClick: () -> Unit,
+  onToggleAddMenu: () -> Unit,
+  onDismissAddMenu: () -> Unit,
+  onPickPhotos: () -> Unit,
+  onPickFiles: () -> Unit,
+  onSelectImageMode: () -> Unit,
+  onSelectWebMode: () -> Unit,
+  onSelectWriteMode: () -> Unit,
   onMicClick: () -> Unit,
   onPrimaryActionClick: () -> Unit,
 ) {
@@ -477,54 +587,65 @@ private fun ComposerBar(
   val micDesc = stringResource(R.string.cd_voice_input)
   val voiceModeDesc = stringResource(R.string.cd_voice_mode)
   val sendDesc = stringResource(R.string.cd_send_message)
-  val placeholderText = stringResource(R.string.ask_reversx_placeholder)
+
+  val plusRotation by
+    animateFloatAsState(
+      targetValue = if (isAddMenuExpanded) 45f else 0f,
+      animationSpec = spring(dampingRatio = 0.72f, stiffness = 420f),
+      label = "plus_rotation",
+    )
 
   Surface(
-    shape = RoundedCornerShape(28.dp),
-    color = MaterialTheme.colorScheme.surfaceVariant,
-    border = BorderStroke(0.5.dp, MaterialTheme.colorScheme.outline),
+    shape = RoundedCornerShape(50),
+    color = Color(0xFF141417),
+    border = BorderStroke(0.5.dp, Color(0xFF26262C)),
     modifier =
       Modifier.fillMaxWidth()
-        .padding(horizontal = 12.dp)
+        .padding(horizontal = 14.dp)
         .padding(bottom = 12.dp),
   ) {
     Row(
-      modifier = Modifier.fillMaxWidth().padding(start = 6.dp, end = 8.dp, top = 6.dp, bottom = 6.dp),
+      modifier = Modifier.fillMaxWidth().padding(start = 6.dp, end = 5.dp, top = 4.dp, bottom = 4.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
-      Box(
-        contentAlignment = Alignment.Center,
-        modifier =
-          Modifier.minimumInteractiveComponentSize()
-            .size(40.dp)
-            .clip(CircleShape)
-            .clickable(onClick = onAddClick)
-            .semantics {
-              contentDescription = addDesc
-            }
-            .testTag("add_attachment_button"),
-      ) {
-        Icon(
-          imageVector = Icons.Rounded.Add,
-          contentDescription = null,
-          tint = MaterialTheme.colorScheme.onBackground,
-          modifier = Modifier.size(24.dp),
+      Box {
+        Box(
+          contentAlignment = Alignment.Center,
+          modifier =
+            Modifier.size(34.dp)
+              .clip(CircleShape)
+              .background(if (isAddMenuExpanded) Color(0xFF25252D) else Color.Transparent)
+              .clickable(role = Role.Button, onClick = onToggleAddMenu)
+              .semantics {
+                contentDescription = addDesc
+              }
+              .testTag("add_attachment_button"),
+        ) {
+          Icon(
+            imageVector = PhosphorIcons.Regular.Plus,
+            contentDescription = null,
+            tint = if (isAddMenuExpanded) PlusAccent else MaterialTheme.colorScheme.onBackground,
+            modifier = Modifier.size(19.dp).rotate(plusRotation),
+          )
+        }
+
+        ComposerPlusDropdown(
+          expanded = isAddMenuExpanded,
+          onDismiss = onDismissAddMenu,
+          onPickPhotos = onPickPhotos,
+          onPickFiles = onPickFiles,
+          onSelectImageMode = onSelectImageMode,
+          onSelectWebMode = onSelectWebMode,
+          onSelectWriteMode = onSelectWriteMode,
         )
       }
 
-      Spacer(modifier = Modifier.width(2.dp))
+      Spacer(modifier = Modifier.width(4.dp))
 
       Box(
-        modifier = Modifier.weight(1f).padding(vertical = 8.dp),
+        modifier = Modifier.weight(1f).padding(vertical = 4.dp),
         contentAlignment = Alignment.CenterStart,
       ) {
-        if (query.isEmpty()) {
-          Text(
-            text = placeholderText,
-            style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-          )
-        }
         BasicTextField(
           value = query,
           onValueChange = onQueryChange,
@@ -532,7 +653,7 @@ private fun ComposerBar(
           textStyle =
             MaterialTheme.typography.bodyLarge.copy(
               color = MaterialTheme.colorScheme.onBackground,
-              fontSize = 16.sp,
+              fontSize = 15.sp,
             ),
           cursorBrush = SolidColor(PlusIconAccent),
           keyboardOptions = KeyboardOptions(imeAction = ImeAction.Send),
@@ -554,20 +675,19 @@ private fun ComposerBar(
       Box(
         contentAlignment = Alignment.Center,
         modifier =
-          Modifier.minimumInteractiveComponentSize()
-            .size(40.dp)
+          Modifier.size(34.dp)
             .clip(CircleShape)
-            .clickable(onClick = onMicClick)
+            .clickable(role = Role.Button, onClick = onMicClick)
             .semantics {
               contentDescription = micDesc
             }
             .testTag("mic_button"),
       ) {
         Icon(
-          imageVector = Icons.Outlined.Mic,
+          imageVector = PhosphorIcons.Regular.Microphone,
           contentDescription = null,
           tint = if (isVoiceActive) PlusIconAccent else MaterialTheme.colorScheme.onBackground,
-          modifier = Modifier.size(22.dp),
+          modifier = Modifier.size(18.dp),
         )
       }
 
@@ -576,13 +696,12 @@ private fun ComposerBar(
       Box(
         contentAlignment = Alignment.Center,
         modifier =
-          Modifier.minimumInteractiveComponentSize()
-            .size(38.dp)
+          Modifier.size(32.dp)
             .clip(CircleShape)
             .background(
               brush = Brush.linearGradient(listOf(VoiceGradientStart, VoiceGradientEnd)),
             )
-            .clickable(onClick = onPrimaryActionClick)
+            .clickable(role = Role.Button, onClick = onPrimaryActionClick)
             .semantics {
               contentDescription = if (query.isNotBlank()) sendDesc else voiceModeDesc
             }
@@ -590,20 +709,205 @@ private fun ComposerBar(
       ) {
         if (query.isNotBlank()) {
           Icon(
-            imageVector = Icons.Rounded.ArrowUpward,
+            imageVector = PhosphorIcons.Regular.ArrowUp,
             contentDescription = null,
             tint = Color.White,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(16.dp),
           )
         } else {
           WaveformIcon(
             color = Color.White,
-            modifier = Modifier.size(18.dp),
+            modifier = Modifier.size(15.dp),
           )
         }
       }
     }
   }
+}
+
+@Composable
+private fun ComposerPlusDropdown(
+  expanded: Boolean,
+  onDismiss: () -> Unit,
+  onPickPhotos: () -> Unit,
+  onPickFiles: () -> Unit,
+  onSelectImageMode: () -> Unit,
+  onSelectWebMode: () -> Unit,
+  onSelectWriteMode: () -> Unit,
+) {
+  DropdownMenu(
+    expanded = expanded,
+    onDismissRequest = onDismiss,
+    offset = DpOffset(0.dp, (-10).dp),
+    shape = RoundedCornerShape(22.dp),
+    containerColor = Color(0xFF151519),
+    tonalElevation = 0.dp,
+    shadowElevation = 18.dp,
+    border = BorderStroke(0.5.dp, Color(0xFF2B2B33)),
+    modifier = Modifier.width(248.dp).testTag("composer_plus_dropdown"),
+  ) {
+    Row(
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp),
+      horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+      DropdownTileButton(
+        icon = PhosphorIcons.Regular.Images,
+        label = stringResource(R.string.attachment_photos),
+        onClick = onPickPhotos,
+        testTag = "attachment_photos_item",
+        modifier = Modifier.weight(1f),
+      )
+      DropdownTileButton(
+        icon = PhosphorIcons.Regular.FileText,
+        label = stringResource(R.string.attachment_files),
+        onClick = onPickFiles,
+        testTag = "attachment_files_item",
+        modifier = Modifier.weight(1f),
+      )
+    }
+
+    HorizontalDivider(
+      color = Color(0xFF26262E),
+      thickness = 0.5.dp,
+      modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+    )
+
+    Column(
+      modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
+      verticalArrangement = Arrangement.spacedBy(2.dp),
+    ) {
+      DropdownToolRow(
+        icon = PhosphorIcons.Regular.Image,
+        iconTint = PlusIconAccent,
+        title = stringResource(R.string.action_create_image),
+        subtitle = stringResource(R.string.dropdown_subtitle_image),
+        onClick = onSelectImageMode,
+        testTag = "dropdown_create_image",
+      )
+      DropdownToolRow(
+        icon = PhosphorIcons.Regular.Globe,
+        iconTint = Color(0xFF67E8F9),
+        title = stringResource(R.string.action_search_web),
+        subtitle = stringResource(R.string.dropdown_subtitle_web),
+        onClick = onSelectWebMode,
+        testTag = "dropdown_search_web",
+      )
+      DropdownToolRow(
+        icon = PhosphorIcons.Regular.Pencil,
+        iconTint = MaterialTheme.colorScheme.onBackground,
+        title = stringResource(R.string.action_write_or_edit),
+        subtitle = stringResource(R.string.dropdown_subtitle_write),
+        onClick = onSelectWriteMode,
+        testTag = "dropdown_write_edit",
+      )
+    }
+  }
+}
+
+@Composable
+private fun DropdownTileButton(
+  icon: ImageVector,
+  label: String,
+  onClick: () -> Unit,
+  testTag: String,
+  modifier: Modifier = Modifier,
+) {
+  Surface(
+    shape = RoundedCornerShape(14.dp),
+    color = Color(0xFF1E1E24),
+    border = BorderStroke(0.5.dp, Color(0xFF2D2D36)),
+    modifier =
+      modifier
+        .clip(RoundedCornerShape(14.dp))
+        .clickable(role = Role.Button, onClick = onClick)
+        .testTag(testTag),
+  ) {
+    Column(
+      modifier = Modifier.fillMaxWidth().padding(vertical = 12.dp, horizontal = 8.dp),
+      horizontalAlignment = Alignment.CenterHorizontally,
+      verticalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+      Icon(
+        imageVector = icon,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onBackground,
+        modifier = Modifier.size(20.dp),
+      )
+      Text(
+        text = label,
+        style = MaterialTheme.typography.labelMedium.copy(
+          fontSize = 12.5.sp,
+          fontWeight = FontWeight.Medium,
+        ),
+        color = MaterialTheme.colorScheme.onBackground,
+      )
+    }
+  }
+}
+
+@Composable
+private fun DropdownToolRow(
+  icon: ImageVector,
+  iconTint: Color,
+  title: String,
+  subtitle: String,
+  onClick: () -> Unit,
+  testTag: String,
+) {
+  Row(
+    modifier =
+      Modifier.fillMaxWidth()
+        .clip(RoundedCornerShape(12.dp))
+        .clickable(role = Role.Button, onClick = onClick)
+        .padding(horizontal = 10.dp, vertical = 9.dp)
+        .testTag(testTag),
+    verticalAlignment = Alignment.CenterVertically,
+    horizontalArrangement = Arrangement.spacedBy(12.dp),
+  ) {
+    Surface(
+      shape = CircleShape,
+      color = Color(0xFF1F1F26),
+      modifier = Modifier.size(32.dp),
+    ) {
+      Box(contentAlignment = Alignment.Center) {
+        Icon(
+          imageVector = icon,
+          contentDescription = null,
+          tint = iconTint,
+          modifier = Modifier.size(16.dp),
+        )
+      }
+    }
+    Column(modifier = Modifier.weight(1f)) {
+      Text(
+        text = title,
+        style = MaterialTheme.typography.bodyMedium.copy(
+          fontSize = 14.sp,
+          fontWeight = FontWeight.Medium,
+        ),
+        color = MaterialTheme.colorScheme.onBackground,
+      )
+      Text(
+        text = subtitle,
+        style = MaterialTheme.typography.labelMedium.copy(fontSize = 11.5.sp),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+      )
+    }
+  }
+}
+
+private fun resolveDisplayName(context: Context, uri: Uri): String? {
+  return runCatching {
+    context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)
+      ?.use { cursor ->
+        if (cursor.moveToFirst()) {
+          val idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME)
+          if (idx >= 0) cursor.getString(idx) else null
+        } else {
+          null
+        }
+      }
+  }.getOrNull()
 }
 
 @Composable

@@ -50,4 +50,22 @@
     <string name="voice_style_aurora">Aurora</string>
     <string name="voice_style_jarvis">Jarvis</string>
     <string name="voice_style_equalizer">Equalizer</string>
+    <string name="sidebar_menu_images">Images</string>
+    <string name="sidebar_menu_library">Library</string>
+    <string name="sidebar_menu_projects">Projects</string>
+    <string name="sidebar_menu_scheduled">Scheduled</string>
+    <string name="sidebar_menu_plugins">Plugins</string>
+    <string name="sidebar_recents">Recents</string>
+    <string name="sidebar_see_all">See all…</string>
+    <string name="sidebar_show_less">Show less</string>
+    <string name="sidebar_chat_button">Chat</string>
+    <string name="cd_search_chats">Search chats</string>
+    <string name="cd_profile_avatar">Profile and ReversX Plus</string>
+    <string name="sidebar_profile_initial">R</string>
+    <string name="dropdown_subtitle_image">Generate visuals</string>
+    <string name="dropdown_subtitle_web">Live web results</string>
+    <string name="dropdown_subtitle_write">Draft &amp; refine text</string>
+    <string name="attachment_photo_label">Photo attached</string>
+    <string name="attachment_file_label">File attached</string>
+    <string name="cd_remove_attachment">Remove attachment</string>
 </resources>
