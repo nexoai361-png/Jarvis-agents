@@ -38,8 +38,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.DrawerValue
-import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
@@ -51,6 +51,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.material3.rememberDrawerState
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -73,7 +74,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.DpOffset
+import androidx.compose.ui.unit.Dp
 import com.adamglin.PhosphorIcons
 import com.adamglin.phosphoricons.Regular
 import com.adamglin.phosphoricons.regular.ArrowUp
@@ -251,32 +252,6 @@ fun ReversXScreen(
           onToggleAddMenu = {
             viewModel.onSetAttachmentMenuExpanded(!uiState.isAttachmentMenuExpanded)
           },
-          onDismissAddMenu = { viewModel.onSetAttachmentMenuExpanded(false) },
-          onPickPhotos = {
-            viewModel.onSetAttachmentMenuExpanded(false)
-            photoPickerLauncher.launch(
-              PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
-            )
-          },
-          onPickFiles = {
-            viewModel.onSetAttachmentMenuExpanded(false)
-            filePickerLauncher.launch(arrayOf("*/*"))
-          },
-          onSelectImageMode = {
-            viewModel.onSetAttachmentMenuExpanded(false)
-            viewModel.onQuickActionSelected(imagePromptPrefix)
-            inputFocusRequester.requestFocus()
-          },
-          onSelectWebMode = {
-            viewModel.onSetAttachmentMenuExpanded(false)
-            viewModel.onQuickActionSelected(searchPromptPrefix)
-            inputFocusRequester.requestFocus()
-          },
-          onSelectWriteMode = {
-            viewModel.onSetAttachmentMenuExpanded(false)
-            viewModel.onQuickActionSelected(writePromptPrefix)
-            inputFocusRequester.requestFocus()
-          },
           onMicClick = {
             VoiceSoundPlayer.playActivationChime()
             viewModel.onOpenVoiceMode()
@@ -308,6 +283,38 @@ fun ReversXScreen(
       onTranscriptChanged = viewModel::onVoiceTranscriptChanged,
       onSendPromptToChat = { viewModel.onSendVoicePromptToChat(justNowLabel) },
       onClose = viewModel::onCloseVoiceMode,
+    )
+  }
+
+  if (uiState.isAttachmentMenuExpanded) {
+    BackHandler { viewModel.onSetAttachmentMenuExpanded(false) }
+    ComposerPlusBottomSheet(
+      onDismiss = { viewModel.onSetAttachmentMenuExpanded(false) },
+      onPickPhotos = {
+        viewModel.onSetAttachmentMenuExpanded(false)
+        photoPickerLauncher.launch(
+          PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly),
+        )
+      },
+      onPickFiles = {
+        viewModel.onSetAttachmentMenuExpanded(false)
+        filePickerLauncher.launch(arrayOf("*/*"))
+      },
+      onSelectImageMode = {
+        viewModel.onSetAttachmentMenuExpanded(false)
+        viewModel.onQuickActionSelected(imagePromptPrefix)
+        inputFocusRequester.requestFocus()
+      },
+      onSelectWebMode = {
+        viewModel.onSetAttachmentMenuExpanded(false)
+        viewModel.onQuickActionSelected(searchPromptPrefix)
+        inputFocusRequester.requestFocus()
+      },
+      onSelectWriteMode = {
+        viewModel.onSetAttachmentMenuExpanded(false)
+        viewModel.onQuickActionSelected(writePromptPrefix)
+        inputFocusRequester.requestFocus()
+      },
     )
   }
 
@@ -574,12 +581,6 @@ private fun ComposerBar(
   focusRequester: FocusRequester,
   onQueryChange: (String) -> Unit,
   onToggleAddMenu: () -> Unit,
-  onDismissAddMenu: () -> Unit,
-  onPickPhotos: () -> Unit,
-  onPickFiles: () -> Unit,
-  onSelectImageMode: () -> Unit,
-  onSelectWebMode: () -> Unit,
-  onSelectWriteMode: () -> Unit,
   onMicClick: () -> Unit,
   onPrimaryActionClick: () -> Unit,
 ) {
@@ -608,35 +609,23 @@ private fun ComposerBar(
       modifier = Modifier.fillMaxWidth().padding(start = 6.dp, end = 5.dp, top = 4.dp, bottom = 4.dp),
       verticalAlignment = Alignment.CenterVertically,
     ) {
-      Box {
-        Box(
-          contentAlignment = Alignment.Center,
-          modifier =
-            Modifier.size(34.dp)
-              .clip(CircleShape)
-              .background(if (isAddMenuExpanded) Color(0xFF25252D) else Color.Transparent)
-              .clickable(role = Role.Button, onClick = onToggleAddMenu)
-              .semantics {
-                contentDescription = addDesc
-              }
-              .testTag("add_attachment_button"),
-        ) {
-          Icon(
-            imageVector = PhosphorIcons.Regular.Plus,
-            contentDescription = null,
-            tint = if (isAddMenuExpanded) PlusAccent else MaterialTheme.colorScheme.onBackground,
-            modifier = Modifier.size(19.dp).rotate(plusRotation),
-          )
-        }
-
-        ComposerPlusDropdown(
-          expanded = isAddMenuExpanded,
-          onDismiss = onDismissAddMenu,
-          onPickPhotos = onPickPhotos,
-          onPickFiles = onPickFiles,
-          onSelectImageMode = onSelectImageMode,
-          onSelectWebMode = onSelectWebMode,
-          onSelectWriteMode = onSelectWriteMode,
+      Box(
+        contentAlignment = Alignment.Center,
+        modifier =
+          Modifier.size(34.dp)
+            .clip(CircleShape)
+            .background(if (isAddMenuExpanded) Color(0xFF25252D) else Color.Transparent)
+            .clickable(role = Role.Button, onClick = onToggleAddMenu)
+            .semantics {
+              contentDescription = addDesc
+            }
+            .testTag("add_attachment_button"),
+      ) {
+        Icon(
+          imageVector = PhosphorIcons.Regular.Plus,
+          contentDescription = null,
+          tint = if (isAddMenuExpanded) PlusAccent else MaterialTheme.colorScheme.onBackground,
+          modifier = Modifier.size(19.dp).rotate(plusRotation),
         )
       }
 
@@ -725,9 +714,9 @@ private fun ComposerBar(
   }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ComposerPlusDropdown(
-  expanded: Boolean,
+private fun ComposerPlusBottomSheet(
   onDismiss: () -> Unit,
   onPickPhotos: () -> Unit,
   onPickFiles: () -> Unit,
@@ -735,71 +724,87 @@ private fun ComposerPlusDropdown(
   onSelectWebMode: () -> Unit,
   onSelectWriteMode: () -> Unit,
 ) {
-  DropdownMenu(
-    expanded = expanded,
+  val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = false)
+
+  ModalBottomSheet(
     onDismissRequest = onDismiss,
-    offset = DpOffset(0.dp, (-10).dp),
-    shape = RoundedCornerShape(22.dp),
+    sheetState = sheetState,
+    sheetMaxWidth = Dp.Unspecified,
+    shape = RoundedCornerShape(topStart = 26.dp, topEnd = 26.dp),
     containerColor = Color(0xFF151519),
-    tonalElevation = 0.dp,
-    shadowElevation = 18.dp,
-    border = BorderStroke(0.5.dp, Color(0xFF2B2B33)),
-    modifier = Modifier.width(248.dp).testTag("composer_plus_dropdown"),
+    contentColor = MaterialTheme.colorScheme.onBackground,
+    scrimColor = Color.Black.copy(alpha = 0.62f),
+    dragHandle = {
+      BottomSheetDefaults.DragHandle(
+        color = Color(0xFF4A4A55),
+        width = 40.dp,
+        height = 4.dp,
+      )
+    },
+    modifier = Modifier.fillMaxWidth().testTag("composer_plus_sheet"),
   ) {
-    Row(
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 10.dp, vertical = 4.dp),
-      horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-      DropdownTileButton(
-        icon = PhosphorIcons.Regular.Images,
-        label = stringResource(R.string.attachment_photos),
-        onClick = onPickPhotos,
-        testTag = "attachment_photos_item",
-        modifier = Modifier.weight(1f),
-      )
-      DropdownTileButton(
-        icon = PhosphorIcons.Regular.FileText,
-        label = stringResource(R.string.attachment_files),
-        onClick = onPickFiles,
-        testTag = "attachment_files_item",
-        modifier = Modifier.weight(1f),
-      )
-    }
-
-    HorizontalDivider(
-      color = Color(0xFF26262E),
-      thickness = 0.5.dp,
-      modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-    )
-
     Column(
-      modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 2.dp),
-      verticalArrangement = Arrangement.spacedBy(2.dp),
+      modifier =
+        Modifier.fillMaxWidth()
+          .navigationBarsPadding()
+          .padding(horizontal = 16.dp)
+          .padding(bottom = 22.dp),
     ) {
-      DropdownToolRow(
-        icon = PhosphorIcons.Regular.Image,
-        iconTint = PlusIconAccent,
-        title = stringResource(R.string.action_create_image),
-        subtitle = stringResource(R.string.dropdown_subtitle_image),
-        onClick = onSelectImageMode,
-        testTag = "dropdown_create_image",
+      Row(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+      ) {
+        DropdownTileButton(
+          icon = PhosphorIcons.Regular.Images,
+          label = stringResource(R.string.attachment_photos),
+          onClick = onPickPhotos,
+          testTag = "attachment_photos_item",
+          modifier = Modifier.weight(1f),
+        )
+        DropdownTileButton(
+          icon = PhosphorIcons.Regular.FileText,
+          label = stringResource(R.string.attachment_files),
+          onClick = onPickFiles,
+          testTag = "attachment_files_item",
+          modifier = Modifier.weight(1f),
+        )
+      }
+
+      HorizontalDivider(
+        color = Color(0xFF26262E),
+        thickness = 0.5.dp,
+        modifier = Modifier.padding(vertical = 14.dp),
       )
-      DropdownToolRow(
-        icon = PhosphorIcons.Regular.Globe,
-        iconTint = Color(0xFF67E8F9),
-        title = stringResource(R.string.action_search_web),
-        subtitle = stringResource(R.string.dropdown_subtitle_web),
-        onClick = onSelectWebMode,
-        testTag = "dropdown_search_web",
-      )
-      DropdownToolRow(
-        icon = PhosphorIcons.Regular.Pencil,
-        iconTint = MaterialTheme.colorScheme.onBackground,
-        title = stringResource(R.string.action_write_or_edit),
-        subtitle = stringResource(R.string.dropdown_subtitle_write),
-        onClick = onSelectWriteMode,
-        testTag = "dropdown_write_edit",
-      )
+
+      Column(
+        modifier = Modifier.fillMaxWidth(),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+      ) {
+        DropdownToolRow(
+          icon = PhosphorIcons.Regular.Image,
+          iconTint = PlusIconAccent,
+          title = stringResource(R.string.action_create_image),
+          subtitle = stringResource(R.string.dropdown_subtitle_image),
+          onClick = onSelectImageMode,
+          testTag = "dropdown_create_image",
+        )
+        DropdownToolRow(
+          icon = PhosphorIcons.Regular.Globe,
+          iconTint = Color(0xFF67E8F9),
+          title = stringResource(R.string.action_search_web),
+          subtitle = stringResource(R.string.dropdown_subtitle_web),
+          onClick = onSelectWebMode,
+          testTag = "dropdown_search_web",
+        )
+        DropdownToolRow(
+          icon = PhosphorIcons.Regular.Pencil,
+          iconTint = MaterialTheme.colorScheme.onBackground,
+          title = stringResource(R.string.action_write_or_edit),
+          subtitle = stringResource(R.string.dropdown_subtitle_write),
+          onClick = onSelectWriteMode,
+          testTag = "dropdown_write_edit",
+        )
+      }
     }
   }
 }
