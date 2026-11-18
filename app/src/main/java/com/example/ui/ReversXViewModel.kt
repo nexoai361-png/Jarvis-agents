@@ -11,6 +11,7 @@ data class ChatHistoryItem(
   val id: String,
   val title: String,
   val timestampLabel: String,
+  val isPinned: Boolean = false,
 )
 
 enum class VoiceVisualStyle {
@@ -132,13 +133,15 @@ class ReversXViewModel : ViewModel() {
           title = trimmed,
           timestampLabel = timestampLabel,
         )
+      val pinned = state.chatHistory.filter { it.isPinned }
+      val unpinned = state.chatHistory.filterNot { it.isPinned }
       state.copy(
         inputText = "",
         voiceTranscript = "",
         isVoiceModeActive = false,
         isVoiceListening = false,
         voiceAmplitude = 0f,
-        chatHistory = listOf(newItem) + state.chatHistory,
+        chatHistory = pinned + listOf(newItem) + unpinned,
         activeChatId = newChatId,
       )
     }
@@ -188,6 +191,31 @@ class ReversXViewModel : ViewModel() {
     }
   }
 
+  fun onRenameChat(chatId: String, newTitle: String) {
+    val trimmed = newTitle.trim()
+    if (trimmed.isEmpty()) return
+    _uiState.update { state ->
+      state.copy(
+        chatHistory =
+          state.chatHistory.map { item ->
+            if (item.id == chatId) item.copy(title = trimmed) else item
+          },
+      )
+    }
+  }
+
+  fun onTogglePinChat(chatId: String) {
+    _uiState.update { state ->
+      val updated =
+        state.chatHistory.map { item ->
+          if (item.id == chatId) item.copy(isPinned = !item.isPinned) else item
+        }
+      val pinned = updated.filter { it.isPinned }
+      val unpinned = updated.filterNot { it.isPinned }
+      state.copy(chatHistory = pinned + unpinned)
+    }
+  }
+
   fun onNewChat() {
     _uiState.update {
       it.copy(
@@ -215,10 +243,12 @@ class ReversXViewModel : ViewModel() {
           title = trimmed,
           timestampLabel = timestampLabel,
         )
+      val pinned = state.chatHistory.filter { it.isPinned }
+      val unpinned = state.chatHistory.filterNot { it.isPinned }
       state.copy(
         inputText = "",
         attachedItemLabel = null,
-        chatHistory = listOf(newItem) + state.chatHistory,
+        chatHistory = pinned + listOf(newItem) + unpinned,
         activeChatId = newChatId,
       )
     }

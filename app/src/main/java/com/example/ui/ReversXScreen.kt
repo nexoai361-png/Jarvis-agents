@@ -166,6 +166,8 @@ fun ReversXScreen(
           scope.launch { drawerState.close() }
         },
         onDeleteChat = viewModel::onDeleteChat,
+        onRenameChat = viewModel::onRenameChat,
+        onTogglePinChat = viewModel::onTogglePinChat,
         onGetPlusClick = {
           scope.launch { drawerState.close() }
           viewModel.onSetPlusSheetVisible(true)

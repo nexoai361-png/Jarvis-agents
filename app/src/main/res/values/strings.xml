@@ -68,4 +68,12 @@
     <string name="attachment_photo_label">Photo attached</string>
     <string name="attachment_file_label">File attached</string>
     <string name="cd_remove_attachment">Remove attachment</string>
+    <string name="chat_action_pin">Pin</string>
+    <string name="chat_action_unpin">Unpin</string>
+    <string name="chat_action_rename">Rename</string>
+    <string name="chat_action_delete">Delete</string>
+    <string name="delete_chat_dialog_title">Delete chat?</string>
+    <string name="delete_chat_dialog_message">This will delete \"%1$s\".</string>
+    <string name="dialog_cancel">Cancel</string>
+    <string name="rename_chat_label">New name</string>
 </resources>
