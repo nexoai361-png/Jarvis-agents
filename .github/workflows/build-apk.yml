@@ -22,17 +22,47 @@ jobs:
           distribution: temurin
           java-version: 21
 
-      - name: Configure Android SDK & Licenses
+      - name: Configure Android SDK & Packages
         shell: bash
         run: |
           SDK_ROOT="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          if [ ! -d "$SDK_ROOT" ]; then
+            SDK_ROOT="$HOME/android-sdk"
+            mkdir -p "$SDK_ROOT"
+          else
+            sudo chown -R "$(id -u):$(id -g)" "$SDK_ROOT"
+          fi
+
           echo "ANDROID_HOME=$SDK_ROOT" >> "$GITHUB_ENV"
           echo "ANDROID_SDK_ROOT=$SDK_ROOT" >> "$GITHUB_ENV"
           echo "$SDK_ROOT/platform-tools" >> "$GITHUB_PATH"
-          if [ -x "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" ]; then
-            echo "$SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
-            yes | "$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null 2>&1 || true
+
+          echo "Installing latest Android SDK cmdline-tools..."
+          ARCHIVE_NAME="$(curl -fsSL https://dl.google.com/android/repository/repository2-1.xml 2>/dev/null | grep -oE 'commandlinetools-linux-[0-9]+_latest\.zip' | sort -V | tail -n 1 || true)"
+          if [ -n "$ARCHIVE_NAME" ]; then
+            TOOLS_URL="https://dl.google.com/android/repository/$ARCHIVE_NAME"
+          else
+            TOOLS_URL="https://dl.google.com/android/repository/commandlinetools-linux-13114758_latest.zip"
           fi
+
+          rm -rf "$SDK_ROOT/cmdline-tools/latest" /tmp/cmdline-tools.zip /tmp/cmdline-unpack
+          curl -fsSL "$TOOLS_URL" -o /tmp/cmdline-tools.zip
+          unzip -q /tmp/cmdline-tools.zip -d /tmp/cmdline-unpack
+          mkdir -p "$SDK_ROOT/cmdline-tools"
+          mv /tmp/cmdline-unpack/cmdline-tools "$SDK_ROOT/cmdline-tools/latest"
+          rm -rf /tmp/cmdline-tools.zip /tmp/cmdline-unpack
+
+          LATEST_SDKMANAGER="$SDK_ROOT/cmdline-tools/latest/bin/sdkmanager"
+          echo "$SDK_ROOT/cmdline-tools/latest/bin" >> "$GITHUB_PATH"
+
+          set +o pipefail
+          yes | "$LATEST_SDKMANAGER" --sdk_root="$SDK_ROOT" --licenses >/dev/null
+          set -o pipefail
+
+          "$LATEST_SDKMANAGER" --sdk_root="$SDK_ROOT" --install \
+            "platform-tools" \
+            "platforms;android-36.1" \
+            "build-tools;36.0.0"
 
       - name: Prepare debug keystore
         shell: bash
@@ -42,6 +72,7 @@ jobs:
           elif [ ! -f debug.keystore ]; then
             keytool -genkeypair -v \
               -keystore debug.keystore \
+              -storetype PKCS12 \
               -storepass android \
               -alias androiddebugkey \
               -keypass android \
@@ -57,7 +88,12 @@ jobs:
           gradle-version: 9.3.1
 
       - name: Build Debug APK
-        run: gradle :app:assembleDebug --no-daemon --stacktrace
+        run: |
+          gradle :app:assembleDebug \
+            --no-daemon \
+            --stacktrace \
+            -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" \
+            -Dorg.gradle.workers.max=2
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
