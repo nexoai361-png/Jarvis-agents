@@ -100,6 +100,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.example.R
 import com.example.ui.theme.PlusAccent
 import com.example.ui.theme.PlusIconAccent
+import com.example.ui.theme.SourceCodeProFontFamily
 import com.example.ui.theme.TempActiveSurface
 import com.example.ui.theme.VoiceGradientEnd
 import com.example.ui.theme.VoiceGradientStart
@@ -197,12 +198,11 @@ fun ReversXScreen(
 
         Box(
           modifier = Modifier.weight(1f).fillMaxWidth(),
-          contentAlignment = Alignment.TopCenter,
         ) {
           Column(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.padding(top = 12.dp),
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = 12.dp),
           ) {
             AnimatedVisibility(
               visible = uiState.isTemporaryChat,
@@ -212,22 +212,20 @@ fun ReversXScreen(
               StatusPill(text = stringResource(R.string.temp_chat_active))
             }
           }
-        }
 
-        QuickActionsSection(
-          onCreateImageClick = {
-            viewModel.onQuickActionSelected(imagePromptPrefix)
-            inputFocusRequester.requestFocus()
-          },
-          onWriteOrEditClick = {
-            viewModel.onQuickActionSelected(writePromptPrefix)
-            inputFocusRequester.requestFocus()
-          },
-          onSearchWebClick = {
-            viewModel.onQuickActionSelected(searchPromptPrefix)
-            inputFocusRequester.requestFocus()
-          },
-        )
+          Text(
+            text = stringResource(R.string.app_name),
+            style =
+              MaterialTheme.typography.headlineMedium.copy(
+                fontFamily = SourceCodeProFontFamily,
+                fontWeight = FontWeight.Medium,
+                fontSize = 28.sp,
+                letterSpacing = (-0.8).sp,
+              ),
+            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.55f),
+            modifier = Modifier.align(Alignment.Center).testTag("center_brand_title"),
+          )
+        }
 
         Spacer(modifier = Modifier.height(10.dp))
 
@@ -450,72 +448,6 @@ private fun TopActionBar(
         )
       }
     }
-  }
-}
-
-@Composable
-private fun QuickActionsSection(
-  onCreateImageClick: () -> Unit,
-  onWriteOrEditClick: () -> Unit,
-  onSearchWebClick: () -> Unit,
-) {
-  Column(
-    modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
-    verticalArrangement = Arrangement.spacedBy(4.dp),
-  ) {
-    QuickActionRow(
-      icon = PhosphorIcons.Regular.Image,
-      label = stringResource(R.string.action_create_image),
-      testTag = "action_create_image",
-      onClick = onCreateImageClick,
-    )
-    QuickActionRow(
-      icon = PhosphorIcons.Regular.Pencil,
-      label = stringResource(R.string.action_write_or_edit),
-      testTag = "action_write_or_edit",
-      onClick = onWriteOrEditClick,
-    )
-    QuickActionRow(
-      icon = PhosphorIcons.Regular.Globe,
-      label = stringResource(R.string.action_search_web),
-      testTag = "action_search_web",
-      onClick = onSearchWebClick,
-    )
-  }
-}
-
-@Composable
-private fun QuickActionRow(
-  icon: ImageVector,
-  label: String,
-  testTag: String,
-  onClick: () -> Unit,
-) {
-  Row(
-    modifier =
-      Modifier.fillMaxWidth()
-        .minimumInteractiveComponentSize()
-        .clip(RoundedCornerShape(14.dp))
-        .clickable(onClick = onClick)
-        .padding(horizontal = 4.dp, vertical = 12.dp)
-        .testTag(testTag),
-    verticalAlignment = Alignment.CenterVertically,
-  ) {
-    Icon(
-      imageVector = icon,
-      contentDescription = null,
-      tint = MaterialTheme.colorScheme.onBackground,
-      modifier = Modifier.size(20.dp),
-    )
-    Spacer(modifier = Modifier.width(14.dp))
-    Text(
-      text = label,
-      style = MaterialTheme.typography.bodyLarge.copy(
-        fontSize = 16.sp,
-        fontWeight = FontWeight.Normal,
-      ),
-      color = MaterialTheme.colorScheme.onBackground,
-    )
   }
 }
 
