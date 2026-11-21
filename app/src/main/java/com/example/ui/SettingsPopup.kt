@@ -27,12 +27,9 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -50,7 +47,6 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -92,6 +88,9 @@ internal fun SettingsScreen(
   var amoledBlack by remember { mutableStateOf(true) }
   var savedApiKey by remember { mutableStateOf("") }
   var draftApiKey by remember { mutableStateOf("") }
+  var selectedProvider by remember { mutableStateOf(ByokProvider.OPENAI) }
+  var draftModelId by remember { mutableStateOf(ByokProvider.OPENAI.defaultModel) }
+  var draftBaseUrl by remember { mutableStateOf(ByokProvider.OPENAI.defaultBaseUrl) }
 
   BackHandler {
     if (currentPage != SettingsSubPage.MAIN) {
@@ -244,60 +243,29 @@ internal fun SettingsScreen(
           }
 
           SettingsSubPage.BYOK -> {
-            Surface(
-              shape = RoundedCornerShape(24.dp),
-              color = CardSurfaceColor,
-              modifier = Modifier.fillMaxWidth(),
-            ) {
-              Column(
-                modifier = Modifier.fillMaxWidth().padding(16.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-              ) {
-                OutlinedTextField(
-                  value = draftApiKey,
-                  onValueChange = { draftApiKey = it },
-                  singleLine = true,
-                  visualTransformation = PasswordVisualTransformation(),
-                  label = { Text(stringResource(R.string.settings_byok_hint)) },
-                  shape = RoundedCornerShape(12.dp),
-                  colors =
-                    OutlinedTextFieldDefaults.colors(
-                      focusedBorderColor = PopupTextPrimary,
-                      unfocusedBorderColor = CardDividerColor,
-                      focusedLabelColor = PopupTextPrimary,
-                      unfocusedLabelColor = PopupTextSecondary,
-                      focusedTextColor = PopupTextPrimary,
-                      unfocusedTextColor = PopupTextPrimary,
-                      cursorColor = PopupTextPrimary,
-                    ),
-                  modifier = Modifier.fillMaxWidth().testTag("settings_byok_input"),
-                )
-                Row(
-                  modifier = Modifier.fillMaxWidth(),
-                  horizontalArrangement = Arrangement.End,
-                ) {
-                  if (savedApiKey.isNotEmpty()) {
-                    TextButton(
-                      onClick = {
-                        savedApiKey = ""
-                        draftApiKey = ""
-                        currentPage = SettingsSubPage.MAIN
-                      },
-                    ) {
-                      Text(stringResource(R.string.settings_clear), color = Color(0xFFFF6B6B))
-                    }
-                  }
-                  TextButton(
-                    onClick = {
-                      savedApiKey = draftApiKey.trim()
-                      currentPage = SettingsSubPage.MAIN
-                    },
-                  ) {
-                    Text(stringResource(R.string.settings_save), color = PopupTextPrimary)
-                  }
-                }
-              }
-            }
+            ByokSettingsContent(
+              selectedProvider = selectedProvider,
+              onSelectProvider = { provider ->
+                selectedProvider = provider
+                draftModelId = provider.defaultModel
+                draftBaseUrl = provider.defaultBaseUrl
+              },
+              draftApiKey = draftApiKey,
+              onDraftApiKeyChange = { draftApiKey = it },
+              draftModelId = draftModelId,
+              onDraftModelIdChange = { draftModelId = it },
+              draftBaseUrl = draftBaseUrl,
+              onDraftBaseUrlChange = { draftBaseUrl = it },
+              hasSavedKey = savedApiKey.isNotEmpty(),
+              onSaveClick = {
+                savedApiKey = draftApiKey.trim()
+                currentPage = SettingsSubPage.MAIN
+              },
+              onClearClick = {
+                savedApiKey = ""
+                draftApiKey = ""
+              },
+            )
           }
 
           SettingsSubPage.APPEARANCE -> {

@@ -92,4 +92,15 @@
     <string name="settings_general_temp_default">Start in temporary chat</string>
     <string name="settings_appearance_amoled">AMOLED Pure Black</string>
     <string name="settings_appearance_system_font">System default font</string>
+    <string name="byok_header_title">Bring Your Own Key</string>
+    <string name="byok_header_subtitle">Use your own provider API key directly on this device.</string>
+    <string name="byok_status_configured">Active</string>
+    <string name="byok_status_not_set">Not set</string>
+    <string name="byok_provider_label">Provider</string>
+    <string name="byok_credentials_label">Credentials &amp; Model</string>
+    <string name="byok_model_label">Model ID</string>
+    <string name="byok_base_url_label">Base URL (optional)</string>
+    <string name="byok_cd_toggle_key">Toggle API key visibility</string>
+    <string name="byok_save_configuration">Save configuration</string>
+    <string name="byok_security_note">UI preview only — keys stay in session state.</string>
 </resources>
