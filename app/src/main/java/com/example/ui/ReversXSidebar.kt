@@ -77,6 +77,7 @@ import com.adamglin.phosphoricons.Regular
 import com.adamglin.phosphoricons.regular.Books
 import com.adamglin.phosphoricons.regular.Clock
 import com.adamglin.phosphoricons.regular.Folder
+import com.adamglin.phosphoricons.regular.GearSix
 import com.adamglin.phosphoricons.regular.Images
 import com.adamglin.phosphoricons.regular.MagnifyingGlass
 import com.adamglin.phosphoricons.regular.NotePencil
@@ -91,7 +92,6 @@ import com.example.ui.theme.DrawerActiveItem
 import com.example.ui.theme.DrawerSearchSurface
 import com.example.ui.theme.PlusIconAccent
 import com.example.ui.theme.PureBlack
-import com.example.ui.theme.SidebarAvatarCircle
 import com.example.ui.theme.SidebarChatBlue
 import com.example.ui.theme.SurfaceElevated
 import com.example.ui.theme.SurfaceOutline
@@ -106,7 +106,7 @@ internal fun ReversXDrawerContent(
   onDeleteChat: (String) -> Unit,
   onRenameChat: (String, String) -> Unit,
   onTogglePinChat: (String) -> Unit,
-  onGetPlusClick: () -> Unit,
+  onSettingsClick: () -> Unit,
 ) {
   var isSearchOpen by remember { mutableStateOf(false) }
   var showAllRecents by remember { mutableStateOf(false) }
@@ -233,7 +233,7 @@ internal fun ReversXDrawerContent(
 
       SidebarBottomBar(
         onChatClick = onNewChatClick,
-        onProfileClick = onGetPlusClick,
+        onSettingsClick = onSettingsClick,
       )
     }
   }
@@ -787,9 +787,9 @@ private fun RenameChatDialog(
 @Composable
 private fun SidebarBottomBar(
   onChatClick: () -> Unit,
-  onProfileClick: () -> Unit,
+  onSettingsClick: () -> Unit,
 ) {
-  val profileDesc = stringResource(R.string.cd_profile_avatar)
+  val settingsDesc = stringResource(R.string.cd_settings)
 
   Row(
     modifier =
@@ -839,27 +839,17 @@ private fun SidebarBottomBar(
         Modifier.minimumInteractiveComponentSize()
           .size(44.dp)
           .clip(CircleShape)
-          .clickable(role = Role.Button, onClick = onProfileClick)
-          .semantics { contentDescription = profileDesc }
-          .testTag("sidebar_profile_avatar_button"),
+          .clickable(role = Role.Button, onClick = onSettingsClick)
+          .semantics { contentDescription = settingsDesc }
+          .testTag("sidebar_settings_button"),
     ) {
       Box(contentAlignment = Alignment.Center) {
-        Box(
-          contentAlignment = Alignment.Center,
-          modifier =
-            Modifier.size(30.dp)
-              .clip(CircleShape)
-              .background(SidebarAvatarCircle),
-        ) {
-          Text(
-            text = stringResource(R.string.sidebar_profile_initial),
-            style = MaterialTheme.typography.labelMedium.copy(
-              fontSize = 13.sp,
-              fontWeight = FontWeight.Medium,
-            ),
-            color = Color.White,
-          )
-        }
+        Icon(
+          imageVector = PhosphorIcons.Regular.GearSix,
+          contentDescription = null,
+          tint = MaterialTheme.colorScheme.onBackground,
+          modifier = Modifier.size(20.dp),
+        )
       }
     }
   }

@@ -14,6 +14,8 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -169,10 +171,7 @@ fun ReversXScreen(
         onDeleteChat = viewModel::onDeleteChat,
         onRenameChat = viewModel::onRenameChat,
         onTogglePinChat = viewModel::onTogglePinChat,
-        onGetPlusClick = {
-          scope.launch { drawerState.close() }
-          viewModel.onSetPlusSheetVisible(true)
-        },
+        onSettingsClick = { viewModel.onSetSettingsOpen(true) },
       )
     },
   ) {
@@ -283,6 +282,21 @@ fun ReversXScreen(
       onTranscriptChanged = viewModel::onVoiceTranscriptChanged,
       onSendPromptToChat = { viewModel.onSendVoicePromptToChat(justNowLabel) },
       onClose = viewModel::onCloseVoiceMode,
+    )
+  }
+
+  AnimatedVisibility(
+    visible = uiState.isSettingsOpen,
+    enter = fadeIn() + slideInVertically(initialOffsetY = { it / 10 }),
+    exit = fadeOut() + slideOutVertically(targetOffsetY = { it / 10 }),
+  ) {
+    SettingsScreen(
+      onDismiss = { viewModel.onSetSettingsOpen(false) },
+      onUpgradePlusClick = {
+        viewModel.onSetSettingsOpen(false)
+        scope.launch { drawerState.close() }
+        viewModel.onSetPlusSheetVisible(true)
+      },
     )
   }
 

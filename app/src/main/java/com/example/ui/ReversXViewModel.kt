@@ -30,6 +30,7 @@ data class ReversXUiState(
   val voiceAmplitude: Float = 0f,
   val voiceVisualStyle: VoiceVisualStyle = VoiceVisualStyle.EQUALIZER,
   val isPlusSheetVisible: Boolean = false,
+  val isSettingsOpen: Boolean = false,
   val isAttachmentMenuExpanded: Boolean = false,
   val attachedItemLabel: String? = null,
   val isAttachmentPhoto: Boolean = false,
@@ -149,6 +150,10 @@ class ReversXViewModel : ViewModel() {
 
   fun onSetPlusSheetVisible(visible: Boolean) {
     _uiState.update { it.copy(isPlusSheetVisible = visible) }
+  }
+
+  fun onSetSettingsOpen(open: Boolean) {
+    _uiState.update { it.copy(isSettingsOpen = open) }
   }
 
   fun onSetAttachmentMenuExpanded(expanded: Boolean) {
